@@ -162,7 +162,7 @@ This endpoint retrieves the latest user record from the database based on the `c
 - `500 Internal Server Error`
 - If there is a failure querying the database or encoding the response.
 
-Logs
+#### 🪵 Logs
 - On success, logs the time taken to fetch the user.
 - On failure, logs the error message.
 
@@ -205,7 +205,7 @@ GET /api/v1/auth/get-user-by-mail?mail_address=user@example.com
 - 404 Not Found
 - If no user is found with the given mail address.
 
-Logs
+#### 🪵 Logs
 - On success, logs the time taken to fetch the user by email.
 - On failure, logs the error message.
 
@@ -260,7 +260,7 @@ Authorization: Bearer <jwt-token>
 - 500 Internal Server Error
 - If database query or data scanning fails.
 
-Logs
+#### 🪵 Logs
 - On success, logs the time taken for the admin to fetch all users.
 - On unauthorized or forbidden access, logs warnings or errors accordingly.
 - On failure, logs detailed error messages.
@@ -290,9 +290,9 @@ This endpoint allows updating user details such as username, role, and activatio
   "mail_address": "user@example.com"
 }
 ```
-- mail_address is required to identify the user to update.
+mail_address is required to identify the user to update.
 
-- Other fields (username, role, activated) are optional and will be updated if provided.
+Other fields (username, role, activated) are optional and will be updated if provided.
 
 
 Response
@@ -321,13 +321,938 @@ Authorization Logic
 
 - Non-admin user can update only their own data (must match mail_address).
 
- Logs
+#### 🪵 Logs
 - Logs errors for failed authentication, invalid payload, unauthorized attempts, and database errors.
 - Logs successful update and time taken to process the request.
 
 
+### `POST /register-user`
+
+**Register a new user**
+
+This endpoint registers a new user by inserting their data into the database after validating and hashing the password.
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body example:
+
+```json
+{
+  "username": "johndoe",
+  "mail_address": "john@example.com",
+  "password": "securePassword123"
+}
+```
+
+username, mail_address, and password are required.
+
+#### 🔐 Security Measures
+Email is normalized (lowercased + trimmed) before checking or inserting.
+
+Passwords are hashed using bcrypt before storage.
+
+Rate limiting is applied per IP using httprate, configured by:
+
+r.Config.RateLimitRegister
+
+r.Config.RateLimitWindowMinutes
+
+✅ Success Response
+201 Created
+Plain text: "User registered successfully"
+
+#### Error Responses
+400 Bad Request
+If the request body is missing or invalid.
+
+409 Conflict
+If the username or email is already registered.
+
+500 Internal Server Error
+If a database query, insert operation, or password hashing fails.
+
+Logs
+Logs an error if:
+
+JSON parsing fails
+
+User existence check fails
+
+Password hashing fails
+
+Insert operation fails
+
+Logs an info message if the user is successfully registered, including the time taken for the operation.
 
 
+### `POST /login`
+
+**Authenticate a user and return a JWT**
+
+This endpoint validates user credentials and returns a signed JWT token along with the user's role if authentication is successful.
+
+---
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body example:
+
+```json
+{
+  "mail_address": "john@example.com",
+  "password": "securePassword123"
+}
+```
+
+Both mail_address and password are required.
+
+#### 🔐 Security Measures
+Password is securely validated using bcrypt.CompareHashAndPassword.
+
+Returns a JWT signed with the server’s secret key.
+
+JWT contains: user_id, role, exp (expiry).
+
+Rate limiting is applied per IP using httprate, configured by:
+
+r.Config.RateLimitLogin
+
+r.Config.RateLimitWindowMinutes
+
+✅ Success Response
+200 OK
+
+Content-Type: application/json
+
+Body:
+```
+
+{
+  "token": "<JWT token>",
+  "role": "Admin" // or "Sales Representative"
+}
+```
+
+
+#### Error Responses
+400 Bad Request
+If the request body is missing or invalid.
+
+401 Unauthorized
+If the password is incorrect.
+
+404 Not Found
+If the user does not exist (depending on DB error returned).
+
+500 Internal Server Error
+If a database or JWT generation error occurs.
+
+#### 🪵 Logs
+Logs error if:
+
+Request body decoding fails
+
+User fetch from DB fails
+
+Password validation fails
+
+JWT signing fails
+
+Logs info if the login is successful with the time taken.
+
+#### 📌 Notes
+The JWT token must be used in the Authorization header for protected endpoints:
+Authorization: Bearer <token>
+
+### `POST /send-mail-reset-code`
+
+**Initiate password reset by sending a reset code to the user's email address.**
+
+---
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body:
+
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+mail_address is required.
+#### 🔐 Security Measures
+Email is normalized (trimmed + lowercased) before processing.
+
+No user existence is leaked in response (uniform response).
+
+Email format is validated (basic @ check).
+
+Rate-limited per IP using httprate:
+
+r.Config.RateLimitResetCode
+
+r.Config.RateLimitWindowMinutes
+
+✅ Success Response
+200 OK
+
+Content-Type: text/plain
+
+Body:
+
+If the email exists, a reset link/code has been sent.
+
+#### Error Responses
+400 Bad Request
+If the request body is malformed or email format is invalid.
+
+500 Internal Server Error
+If database access, reset code generation, or update fails.
+
+#### 🛠️ Backend Flow
+Parse and validate email.
+
+Check user existence in the users table (by email).
+
+If user found:
+
+Generate reset code
+
+Save reset code to DB via UpdateResetCode()
+
+Send reset email via mailer.SendPasswordResetMail(...) (in background goroutine).
+
+Always respond with a generic success message.
+
+#### 🪵 Logging
+Logs all errors (decoding, DB, mailing).
+
+Logs when email is sent or skipped (for non-existing users).
+
+Logs duration of the process.
+
+
+### `POST /reset-password`
+
+**Resets the user's password after verifying the reset code.**
+
+---
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body:
+
+```json
+{
+  "mail_address": "user@example.com",
+  "new_password": "NewSecurePassword123!"
+}
+```
+mail_address is required (will be normalized).
+
+new_password is required and will be securely hashed.
+
+#### 🔐 Security Measures
+Email is trimmed + lowercased.
+
+Password is hashed using bcrypt.
+
+Password reset only allowed if reset_verified = true in the database.
+
+After successful reset:
+
+reset_verified is set to false.
+
+updated_at is updated.
+
+Rate-limited per IP via httprate:
+
+r.Config.RateLimitResetPassword
+
+r.Config.RateLimitWindowMinutes
+
+✅ Success Response
+200 OK
+
+Content-Type: text/plain
+
+Body:
+```
+Password reset successfully! User can use new password.
+```
+
+### `POST /generate-auth-code`
+
+**Generates and sends an authentication code to the provided email address.**
+
+---
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body:
+
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+mail_address is required, will be lowercased and trimmed.
+
+Must contain an @.
+#### 🔐 Security & Behavior
+Rate-limited per IP:
+
+Configured via: r.Config.RateLimitResetCode and r.Config.RateLimitWindowMinutes
+
+If the email is new:
+
+A new user is inserted with activated = false, and created_at, updated_at set to NOW().
+
+If email already exists:
+
+No change in user creation (ON CONFLICT DO NOTHING).
+
+A 6-digit authentication code is generated and stored via UpdateAuthenticationCode.
+
+Email is sent asynchronously using SendAuthenticationCode.
+
+✅ Success Response
+200 OK
+
+Content-Type: text/plain
+
+Body:
+```
+If the email exists, a verification code has been sent.
+```
+
+✅ Note: This response is generic to prevent user enumeration.
+❌ Error Responses
+400 Bad Request
+If the payload is invalid or the email format is incorrect.
+
+500 Internal Server Error
+If:
+
+Database insert fails
+
+Auth code generation fails
+
+Updating the DB with the auth code fails
+#### 🛠️ Backend Flow
+Parse and validate email.
+
+Insert user if not exists (with activated=false).
+
+Generate a 6-digit auth code.
+
+Update the user's record with the new code.
+
+Send verification code to email asynchronously.
+
+Return a generic success message.
+#### 🪵 Logging
+Logs:
+
+Errors for bad payloads, DB failures, email issues.
+
+Info when auth code email is sent or skipped due to non-existing email.
+
+Duration of request processing.
+Email delivery is asynchronous (via goroutine), meaning the response doesn't block for sending.
+
+### `POST /verify-auth-code`
+
+**Verifies the provided authentication code and activates the user account.**
+
+---
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body:
+
+```json
+{
+  "mail_address": "user@example.com",
+  "authentication_code": "123456"
+}
+```
+
+mail_address: required, case-insensitive, trimmed
+
+authentication_code: required, trimmed
+
+🔐 Security & Behavior
+Rate-limited per IP:
+
+Configured via: r.Config.RateLimitResetCode and r.Config.RateLimitWindowMinutes
+
+Checks if a user exists with the given mail_address.
+
+Compares stored authentication_code with the submitted one.
+
+If matched:
+
+Sets activated = true for the user.
+✅ Success Response
+200 OK
+
+Content-Type: text/plain
+
+Body:
+```
+Authentication code verified and user activated.
+```
+
+#### Error Responses
+400 Bad Request
+If the request is malformed or fields are missing.
+
+404 Not Found
+If the mail_address doesn't exist in the database.
+
+401 Unauthorized
+If the authentication_code doesn't match the stored value.
+
+500 Internal Server Error
+If there is a database query or update error.
+
+🛠️ Backend Flow
+Parse and validate mail_address and authentication_code.
+
+Query users table for authentication_code using mail_address.
+
+If code matches:
+
+Update activated = true.
+
+Respond with success or appropriate error.
+
+#### 🪵 Logging
+Logs:
+
+Errors for decoding, DB failures, or mismatches.
+
+Warnings if the email doesn't exist.
+
+Info log for successful activation with elapsed time.
+
+
+### `POST /logout`
+
+**Logs out the authenticated user by updating their login status.**
+
+---
+
+#### 🔁 Request
+
+- Method: `POST`
+- URL: `/logout`
+- Headers:
+  - `Authorization: Bearer <JWT_TOKEN>`
+
+---
+
+#### 🔐 Authentication
+
+- Requires a valid JWT token in the `Authorization` header.
+- Token is validated using `GetValidatedUserIDRole`.
+- Extracted `userID` is used to update the login status.
+
+---
+
+#### ✅ Success Response
+
+- `200 OK`
+- Content-Type: `application/json`
+- Body:
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+#### Error Responses
+401 Unauthorized
+If the JWT token is missing, invalid, or expired.
+
+500 Internal Server Error
+If the user's login_status could not be updated in the database.
+
+#### 🛠️ Backend Flow
+Extract and validate JWT token.
+
+Get userID from token claims.
+
+Call updateLoginStatus(userID, false) to mark user as logged out.
+
+Return success response or appropriate error.
+
+#### 🪵 Logging
+Logs:
+
+Errors related to token validation or database update.
+
+Info log on successful logout with elapsed time.
+
+
+### `POST /refresh-jwt-token`
+
+**Refreshes the JWT token for an authenticated user.**
+
+---
+
+#### 🔁 Request
+
+- Method: `POST`
+- URL: `/refresh-jwt-token`
+- Headers:
+  - `Authorization: Bearer <JWT_TOKEN>`
+
+---
+
+#### 🔐 Authentication
+
+- Requires a valid JWT token in the `Authorization` header.
+- Token is validated using `GetValidatedUserIDRole`.
+
+---
+
+#### ✅ Success Response
+
+- `200 OK`
+- Content-Type: `application/json`
+- Body:
+
+```json
+{
+  "token": "<NEW_JWT_TOKEN>"
+}
+
+```
+❌ Error Responses
+401 Unauthorized
+If the JWT token is missing, invalid, or expired.
+
+500 Internal Server Error
+
+If the user's role cannot be fetched from the database.
+
+If the JWT token generation fails.
+
+#### 🛠️ Backend Flow
+Extract and validate the JWT token.
+
+Retrieve userID and role from the database.
+
+Generate a new JWT token using the existing user ID and role.
+
+Return the new token in the response.
+
+🪵 Logging
+Logs:
+
+JWT validation failures.
+
+Errors fetching the user role from DB.
+
+Token generation failures.
+
+Success log with elapsed time for token refresh.
+
+#### 📌 Notes
+This endpoint helps extend session duration without re-authentication.
+
+The new token includes the same userID and role as the previous token.
+
+Ideal for token rotation strategies to maintain security.
+🔄 Token Details
+JWT claims include:
+
+- user_id
+
+- role
+
+- exp (expiration timestamp)
+
+Token expiration is based on h.App.JWTExpiration configuration.
+
+### `POST /change-password`
+
+**Allows an authenticated user to change their password securely.**
+
+---
+
+#### 🔁 Request
+
+- Method: `POST`
+- URL: `/change-password`
+- Headers:
+  - `Authorization: Bearer <JWT_TOKEN>`
+- Body (`application/json`):
+```json
+{
+  "mail_address": "user@example.com",
+  "old_password": "currentPassword123",
+  "new_password": "newSecurePassword456"
+}
+```
+🔐 Authentication
+Requires a valid JWT token.
+
+Token is parsed to extract the user ID.
+
+The user ID is validated and used to ensure that:
+
+The mail_address matches the authenticated user.
+
+The old_password is correct.
+
+✅ Success Response
+200 OK
+
+Body:
+```
+Password changed successfully
+```
+####  Error Responses
+400 Bad Request – Malformed JSON or missing fields.
+
+401 Unauthorized
+
+Missing or invalid token.
+
+Mismatched mail_address.
+
+Incorrect old_password.
+
+404 Not Found – User not found.
+
+500 Internal Server Error – Database or hashing error.
+
+#### 🛠️ Backend Flow
+Extract and validate JWT token from Authorization header.
+
+Parse user_id and validate it exists in the database.
+
+Decode JSON body into ChangePasswordRequest struct.
+
+Match the provided mail_address with the one in the DB.
+
+Compare old password with stored hashed password.
+
+Hash new password and update it in the database.
+
+Respond with success.
+
+#### 🪵 Logging
+Logs:
+
+Authorization issues (missing or invalid token).
+
+Token parsing errors.
+
+Email mismatches.
+
+Incorrect old password attempts.
+
+DB or hashing failures.
+
+Password change success with timing.
+
+#### 📌 Notes
+The endpoint ensures the user is changing their own password.
+
+Passwords are securely hashed using bcrypt.
+
+updated_at field in the database is updated to track the change.
+
+### `POST /deactivate-user`
+
+**Deactivates a user account. Only accessible to users with the `Admin` role.**
+
+---
+
+#### 🔁 Request
+
+- **Method**: `POST`
+- **URL**: `/deactivate-user`
+- **Headers**:
+  - `Authorization: Bearer <JWT_TOKEN>`
+- **Body** (`application/json`):
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+#### 🔐 Authentication & Authorization
+Requires a valid JWT token in the Authorization header.
+
+Role must be "Admin" to perform deactivation.
+
+JWT is parsed and validated using GetValidatedUserRoleOnly (without DB lookup).
+
+✅ Success Response
+Status: 200 OK
+
+Body:
+```
+User deactivated successfully
+```
+
+#### Error Responses
+400 Bad Request – Invalid or missing mail_address in request body.
+
+401 Unauthorized – Invalid or missing JWT token.
+
+403 Forbidden – Authenticated user is not an Admin.
+
+404 Not Found – No user found with the provided mail_address.
+
+500 Internal Server Error – Database error during update.
+
+#### 🛠️ Backend Flow
+Parse and validate JWT using the secret key.
+
+Extract userID and role from token.
+
+Ensure the user has an "Admin" role.
+
+Decode and validate the JSON body.
+
+Update activated = false and updated_at = CURRENT_TIMESTAMP for the user.
+
+Respond with success or appropriate error.
+
+#### 🪵 Logging
+Logs:
+
+Authorization and role validation errors.
+
+JSON parsing issues.
+
+Deactivation success and failure with execution time.
+
+Database update errors.
+
+### `POST /reactivate-user`
+
+**Reactivates a deactivated user account. Only accessible to users with the `Admin` role.**
+
+---
+
+#### 🔁 Request
+
+- **Method**: `POST`
+- **URL**: `/reactivate-user`
+- **Headers**:
+  - `Authorization: Bearer <JWT_TOKEN>`
+- **Body** (`application/json`):
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+#### 🔐 Authentication & Authorization
+Requires a valid JWT token in the Authorization header.
+
+Role must be "Admin" to perform reactivation.
+
+JWT is parsed and validated using GetValidatedUserRoleOnly without querying the database.
+
+✅ Success Response
+Status: 200 OK
+
+Body:
+```
+User reactivated successfully!
+```
+
+#### Error Responses
+400 Bad Request – Invalid or missing mail_address in request body.
+
+401 Unauthorized – Invalid or missing JWT token.
+
+403 Forbidden – Authenticated user is not an Admin.
+
+404 Not Found – No user found with the provided mail_address.
+
+500 Internal Server Error – Database error during update.
+
+#### 🛠️ Backend Flow
+Extract role from JWT without database lookup.
+
+Verify the role is Admin.
+
+Decode the JSON request body and validate mail_address.
+
+Update the activated field to true and updated_at timestamp for the specified user.
+
+Return success or error responses accordingly.
+
+#### 🪵 Logging
+Logs authorization errors.
+
+Logs JSON decoding errors.
+
+Logs database errors and no user found conditions.
+
+Logs successful reactivation including execution time.
+
+#### 📌 Notes
+This endpoint performs a soft reactivation by setting activated = true.
+
+updated_at is updated to the current timestamp.
+
+No password or other fields are affected.
+
+### `POST /check-mail-exists`
+
+**Checks if an email address exists in the users database.**
+
+---
+
+#### Request
+
+- **Method:** `POST`
+- **URL:** `/check-mail-exists`
+- **Headers:**
+  - `Content-Type: application/json`
+- **Body:**  
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+
+#### Response
+Status: 200 OK
+
+Body:
+```
+"Email exists in DB." — if the email is found
+
+"Email does not exist in DB." — if the email is not found
+```
+
+#### Error Responses
+400 Bad Request — invalid JSON or missing mail_address field
+
+500 Internal Server Error — database query error
+
+#### 🛠️ Backend Flow
+Parses JSON request body to get the mail_address.
+
+Queries the database to check if a user with the given email exists.
+
+Returns "Email exists in DB." if found, otherwise "Email does not exist in DB.".
+
+Logs each request and errors with elapsed time.
+
+### `POST /verify-mail-reset-code`
+
+**Verifies a password reset code for a given email address.**
+
+---
+
+#### Request
+
+- **Method:** `POST`
+- **URL:** `/verify-mail-reset-code`
+- **Headers:**
+  - `Content-Type: application/json`
+- **Body:**
+```json
+{
+  "mail_address": "user@example.com",
+  "reset_code": "123456"
+}
+```
+Response
+Status: 200 OK
+
+Body:
+```
+Reset code verified successfully
+```
+
+#### Error Responses
+400 Bad Request — invalid JSON payload or missing required fields (mail_address or reset_code)
+
+401 Unauthorized — invalid email or reset code combination
+
+500 Internal Server Error — database query or update error
+
+#### 🛠️ Backend Flow
+Parses the request JSON to extract mail_address and reset_code.
+
+Normalizes email and reset code strings (trim and lowercase).
+
+Checks if a user exists with the matching email and reset code.
+
+If valid, sets reset_verified flag to true in the database.
+
+Returns success message on valid verification.
+
+Logs requests, errors, and elapsed time.
+
+#### Notes
+This endpoint expects the reset code to be stored in the users table.
+
+On successful verification, the user’s reset_verified status is set to true.
+
+No authentication is required to call this endpoint.
+
+
+
+### `DELETE /delete-user`
+Deletes a user by their email address. Only accessible by Admin users.
+
+Request
+Method: DELETE
+
+URL: /delete-user
+
+Headers:
+
+Content-Type: application/json
+
+Authorization: Bearer <JWT token>
+
+Body:
+```json
+{
+  "mail_address": "user@example.com"
+}
+```
+
+####  Response
+Status: 200 OK
+Body:
+```json
+User deleted successfully
+```
+Status: 400 Bad Request
+Missing or invalid request payload.
+
+Status: 401 Unauthorized
+Missing or invalid JWT token.
+
+Status: 403 Forbidden
+User role is not Admin.
+
+Status: 404 Not Found
+No user found with the specified email address.
+
+Status: 500 Internal Server Error
+Database or internal error.
 
 ## 🚀 Installation & Usage
 ```
