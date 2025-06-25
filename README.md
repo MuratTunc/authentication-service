@@ -122,7 +122,7 @@ This endpoint is used to verify if the Authentication Service is running and hea
 
 - No parameters
 - No authentication required
-🧠 Note: This request does not require authentication or any parameters in the body or headers.
+- This request does not require authentication or any parameters in the body or headers.
 
 #### Response
 
@@ -131,6 +131,201 @@ This endpoint is used to verify if the Authentication Service is running and hea
 
 - `500 Internal Server Error`  
   Returned if something goes wrong internally
+
+
+### `GET /last-user`
+
+**Fetch the most recently created user**
+
+This endpoint retrieves the latest user record from the database based on the `created_at` timestamp in descending order. It returns basic user information without sensitive data like passwords.
+
+#### 🔁 Request
+
+- No parameters
+- No authentication required
+
+#### Response
+
+- `200 OK`  
+  JSON object with the last user's details:
+
+  ```json
+  {
+    "id": <int>,
+    "username": "<string>",
+    "mail_address": "<string>",
+    "role": "<string>",
+    "activated": <bool>,
+    "created_at": "<timestamp>"
+  }
+
+- `500 Internal Server Error`
+- If there is a failure querying the database or encoding the response.
+
+Logs
+- On success, logs the time taken to fetch the user.
+- On failure, logs the error message.
+
+
+### `GET /get-user-by-mail`
+
+**Fetch user details by email address**
+
+This endpoint retrieves user information based on the `mail_address` provided as a query parameter. It returns basic user details without sensitive information like passwords.
+
+#### 🔁 Request
+
+- Query parameter:  
+  `mail_address` (string) — **required**
+
+- No authentication required
+
+Example:  
+GET /api/v1/auth/get-user-by-mail?mail_address=user@example.com
+
+
+#### Response
+
+- `200 OK`  
+  JSON object with the user's details:
+
+  ```json
+  {
+    "id": <int>,
+    "username": "<string>",
+    "mail_address": "<string>",
+    "role": "<string>",
+    "activated": <bool>,
+    "created_at": "<timestamp>"
+  }
+
+- 400 Bad Request
+- If the mail_address query parameter is missing.
+
+- 404 Not Found
+- If no user is found with the given mail address.
+
+Logs
+- On success, logs the time taken to fetch the user by email.
+- On failure, logs the error message.
+
+
+### `GET /list-users`
+
+**List all users (Admin only)**
+
+This endpoint returns a list of all users in the system. Access is restricted to users with the `Admin` role.
+
+#### 🔐 Authentication & Authorization
+
+- Requires a valid JWT token in the request (usually in the `Authorization` header).
+- Only users with the role `Admin` can access this endpoint.
+- Returns `401 Unauthorized` if token is missing or invalid.
+- Returns `403 Forbidden` if the user role is not `Admin`.
+
+#### 🔁 Request
+
+- No URL parameters or body required.
+- JWT token required for authorization.
+
+Example Header:  
+Authorization: Bearer <jwt-token>
+
+#### Response
+
+- `200 OK`  
+  JSON array of user objects:
+
+  ```json
+  [
+    {
+      "id": <int>,
+      "username": "<string>",
+      "mail_address": "<string>",
+      "role": "<string>",
+      "activated": <bool>,
+      "login_status": <bool>,
+      "created_at": "<timestamp>",
+      "updated_at": "<timestamp>"
+    },
+    ...
+  ]
+
+- 401 Unauthorized
+- If JWT token is missing or invalid.
+
+- 403 Forbidden
+- If the user is not an Admin.
+
+- 500 Internal Server Error
+- If database query or data scanning fails.
+
+Logs
+- On success, logs the time taken for the admin to fetch all users.
+- On unauthorized or forbidden access, logs warnings or errors accordingly.
+- On failure, logs detailed error messages.
+
+### `PUT /update-user`
+
+**Update user information**
+
+This endpoint allows updating user details such as username, role, and activation status.
+
+#### 🔐 Authentication & Authorization
+
+- Requires a valid JWT token.
+- Admin users can update any user's data.
+- Non-admin users can only update their own data, verified by matching the `mail_address` in the request with their own.
+
+#### 🔁 Request
+
+- Content-Type: `application/json`
+- JSON body example:
+
+```json
+{
+  "username": "newUsername",
+  "role": "Admin",           // Optional, only admins should use this
+  "activated": true,         // Optional
+  "mail_address": "user@example.com"
+}
+```
+- mail_address is required to identify the user to update.
+
+- Other fields (username, role, activated) are optional and will be updated if provided.
+
+
+Response
+
+200 OK
+Plain text: "User updated successfully"
+
+400 Bad Request
+If JSON body is invalid or missing required fields.
+
+401 Unauthorized
+If JWT is missing or invalid.
+
+403 Forbidden
+If a non-admin user tries to update another user's data.
+
+404 Not Found
+If no user matches the provided mail_address.
+
+500 Internal Server Error
+If database update fails or other server errors occur.
+
+
+Authorization Logic
+- Admin can update any user.
+
+- Non-admin user can update only their own data (must match mail_address).
+
+ Logs
+- Logs errors for failed authentication, invalid payload, unauthorized attempts, and database errors.
+- Logs successful update and time taken to process the request.
+
+
 
 
 
