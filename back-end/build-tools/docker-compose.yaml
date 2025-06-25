@@ -1,0 +1,47 @@
+services:
+  # AUTHENTICATION Service
+  authentication-service:
+    build:
+      context: ./../authentication-service
+      dockerfile: ./../authentication-service/docker/authentication-service.dockerfile
+    image: authentication-service
+    container_name: authentication-service
+    restart: always
+    depends_on:
+      authentication-db:
+        condition: service_healthy
+    ports:
+      - "${AUTHENTICATION_SERVICE_PORT}:${AUTHENTICATION_SERVICE_PORT}"   
+    env_file:
+      - .env
+    networks:
+      - app-network 
+
+  # Authentication Database Definition
+  authentication-db:
+    image: postgres:15  # Use the official PostgreSQL image version 15
+    container_name: authentication-db  # Container name for user database
+    restart: always  # Restart the container automatically if it stops
+    environment:
+      POSTGRES_USER: ${AUTHENTICATION_POSTGRES_DB_USER}  # PostgreSQL username
+      POSTGRES_PASSWORD: ${AUTHENTICATION_POSTGRES_DB_PASSWORD}  # PostgreSQL password
+      POSTGRES_DB: ${AUTHENTICATION_POSTGRES_DB_NAME}  # Name of the PostgreSQL database
+    ports:
+      - "${AUTHENTICATION_POSTGRES_DB_PORT}:5432"  # Map PostgreSQL port from the host to the container
+    healthcheck:  # Health check to ensure PostgreSQL is ready before starting user service
+      test: ["CMD", "pg_isready", "-U", "${AUTHENTICATION_POSTGRES_DB_USER}", "-d", "${AUTHENTICATION_POSTGRES_DB_NAME}"]
+      interval: 10s  # Interval between checks
+      timeout: 5s  # Timeout duration
+      retries: 5  # Number of retries before considering the service as unhealthy
+    volumes:
+      - authentication:/var/lib/postgresql/data  # Persistent storage for PostgreSQL data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+
+volumes:
+  authentication:  # Define volume for authentication database data
