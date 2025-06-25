@@ -107,6 +107,33 @@ Some endpoints in the authentication service **require a valid JWT token** to en
 | `/auth/update-user`           | PUT    | Admin or User  | Update user info                         |
 | `/auth/delete-user`           | DELETE | Admin only     | Permanently delete a user                |
 
+## API Endpoints
+
+Base path: /api/v1/auth
+
+
+### `GET /health`
+
+**Health check endpoint**
+
+This endpoint is used to verify if the Authentication Service is running and healthy. It performs a basic internal check and returns a simple message.
+
+#### 🔁 Request
+
+- No parameters
+- No authentication required
+🧠 Note: This request does not require authentication or any parameters in the body or headers.
+
+#### Response
+
+- `200 OK`  
+  Plain text: `"Authentication Service is up!"`
+
+- `500 Internal Server Error`  
+  Returned if something goes wrong internally
+
+
+
 ## 🚀 Installation & Usage
 ```
 # Clone the repository
@@ -121,7 +148,8 @@ docker-compose up --build
 ```
 
 
-## 📜 License
+## 📝 License
+
 This project is licensed under the [MIT License](LICENSE) – see the LICENSE file for details.
 
 
