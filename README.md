@@ -109,7 +109,60 @@ Some endpoints in the authentication service **require a valid JWT token** to en
 
 ## API Endpoints
 
-Base path: /api/v1/auth
+Base_path: /api/v1/auth
+
+| Method  | Endpoint                      | Description                                                                                       |
+|---------|-------------------------------|-------------------------------------------------------------------------------------------------|
+| GET     | Base_path/health            | Check if the authentication service is up and running.                                          |
+| GET     | Base_path/last-user         | Retrieve the most recently registered user in the system.                                       |
+| GET     | Base_path/get-user-by-mail  | Fetch user details using the user's email address.                                              |
+| GET     | Base_path/list-users        | List all users registered in the system.                                                        |
+| PUT     | Base_path/update-user       | Update existing user information (requires authenticated user).                                 |
+| POST    | Base_path/register-user     | Register a new user. Rate limited to prevent abuse.                                             |
+| POST    | Base_path/login             | Authenticate a user and return a JWT token. Rate limited.                                       |
+| POST    | Base_path/send-mail-reset-code | Send a password reset code to the user's email. Rate limited.                                |
+| POST    | Base_path/reset-password    | Reset user's password using the reset code. Rate limited.                                       |
+| POST    | Base_path/generate-auth-code| Generate an authentication code for email verification or 2FA. Rate limited.                   |
+| POST    | Base_path/verify-auth-code  | Verify the submitted authentication code. Rate limited.                                         |
+| POST    | Base_path/logout            | Log out the current user by invalidating their session or token.                                |
+| POST    | Base_path/refresh-jwt-token | Refresh the JWT token to extend session validity.                                              |
+| POST    | Base_path/change-password   | Change the password for the authenticated user.                                                 |
+| POST    | Base_path/deactivate-user   | Deactivate a user account (admin-only action).                                                  |
+| POST    | Base_path/reactivate-user   | Reactivate a previously deactivated user account (admin-only action).                           |
+| POST    | Base_path/check-mail-exists | Check if an email address is already registered in the system.                                  |
+| POST    | Base_path/verify-mail-reset-code | Verify the password reset code sent to the user’s email.                                      |
+| DELETE  | Base_path/delete-user       | Permanently delete a user account (admin-only action).                                          |
+
+#### Notes:
+
+Replace http://localhost with your actual server URL.
+
+For endpoints requiring authorization, add the Authorization header accordingly.
+
+Body data is JSON formatted and wrapped in single quotes '...' for shell compatibility.
+
+| **Endpoint**                                                      | **Example cURL Command**                                                                                                                                                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/auth/health`                                         | `curl -X GET "http://localhost/api/v1/auth/health"`                                                                                                                                                     |
+| `GET /api/v1/auth/last-user`                                      | `curl -X GET "http://localhost/api/v1/auth/last-user"`                                                                                                                                                  |
+| `GET /api/v1/auth/get-user-by-mail?mail_address=user@example.com` | `curl -X GET "http://localhost/api/v1/auth/get-user-by-mail?mail_address=user@example.com"`                                                                                                             |
+| `GET /api/v1/auth/list-users`                                     | `curl -X GET "http://localhost/api/v1/auth/list-users"`                                                                                                                                                 |
+| `PUT /api/v1/auth/update-user`                                    | `curl -X PUT "http://localhost/api/v1/auth/update-user" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com","username":"newname","role":"Admin","activated":true}'`              |
+| `POST /api/v1/auth/register-user`                                 | `curl -X POST "http://localhost/api/v1/auth/register-user" -H "Content-Type: application/json" -d '{"username":"newuser","mail_address":"newuser@example.com","password":"password123","role":"User"}'` |
+| `POST /api/v1/auth/login`                                         | `curl -X POST "http://localhost/api/v1/auth/login" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com","password":"password123"}'`                                               |
+| `POST /api/v1/auth/send-mail-reset-code`                          | `curl -X POST "http://localhost/api/v1/auth/send-mail-reset-code" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                         |
+| `POST /api/v1/auth/reset-password`                                | `curl -X POST "http://localhost/api/v1/auth/reset-password" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com","reset_code":"123456","new_password":"newpass123"}'`             |
+| `POST /api/v1/auth/generate-auth-code`                            | `curl -X POST "http://localhost/api/v1/auth/generate-auth-code" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                           |
+| `POST /api/v1/auth/verify-auth-code`                              | `curl -X POST "http://localhost/api/v1/auth/verify-auth-code" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com","auth_code":"654321"}'`                                        |
+| `POST /api/v1/auth/logout`                                        | `curl -X POST "http://localhost/api/v1/auth/logout"`                                                                                                                                                    |
+| `POST /api/v1/auth/refresh-jwt-token`                             | `curl -X POST "http://localhost/api/v1/auth/refresh-jwt-token" -H "Authorization: Bearer <old_token>"`                                                                                                  |
+| `POST /api/v1/auth/change-password`                               | `curl -X POST "http://localhost/api/v1/auth/change-password" -H "Content-Type: application/json" -d '{"old_password":"oldpass123","new_password":"newpass123"}'`                                        |
+| `POST /api/v1/auth/deactivate-user`                               | `curl -X POST "http://localhost/api/v1/auth/deactivate-user" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                              |
+| `POST /api/v1/auth/reactivate-user`                               | `curl -X POST "http://localhost/api/v1/auth/reactivate-user" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                              |
+| `POST /api/v1/auth/check-mail-exists`                             | `curl -X POST "http://localhost/api/v1/auth/check-mail-exists" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                            |
+| `POST /api/v1/auth/verify-mail-reset-code`                        | `curl -X POST "http://localhost/api/v1/auth/verify-mail-reset-code" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com","reset_code":"123456"}'`                                 |
+| `DELETE /api/v1/auth/delete-user`                                 | `curl -X DELETE "http://localhost/api/v1/auth/delete-user" -H "Content-Type: application/json" -d '{"mail_address":"user@example.com"}'`                                                                |
+
 
 
 ### `GET /health`
