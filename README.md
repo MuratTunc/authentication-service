@@ -194,5 +194,21 @@ back-end/build-tools/.env
 ```
 ### ⚠️ Important: Don’t forget to update the secrets (e.g. JWT keys, database credentials) before deploying to production.
 
+## Configuration & Environment Setup
+We intentionally include the .env file and the precompiled binary in the repository to simplify setup and usage across different environments.
+
+### 📁 .env File
+- Located at: back-end/build-tools/.env
+
+- Contains all necessary environment variables such as:
+
+- PostgreSQL connection info
+
+- JWT secret keys
+
+- Port configurations
+
+### 🔐 Important:
+Update the values in this file before running the service to suit your local, staging, or production environment.
 
 
