@@ -211,4 +211,22 @@ We intentionally include the .env file and the precompiled binary in the reposit
 ### 🔐 Important:
 Update the values in this file before running the service to suit your local, staging, or production environment.
 
+# Example: Change database credentials
+```
+POSTGRES_USER=your_username
+POSTGRES_PASSWORD=your_secure_password
+```
+
+### 🧱 Binary File
+- Located at: back-end/authentication-service/bin/authentication-serviceBinary
+
+- Compiled and included for convenience so you can run the service immediately without building.
+
+### 🛠️ You are free to:
+
+Replace it with your own build.
+
+Use it directly in cloud instances or Kubernetes clusters.
+
+
 
