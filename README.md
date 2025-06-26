@@ -154,3 +154,45 @@ For endpoints requiring authorization, add the Authorization header accordingly.
 
 Body data is JSON formatted and wrapped in single quotes '...' for shell compatibility.
 
+## 🚀 Installation & Usage
+You can either use the prebuilt binary directly or run the service using Docker Compose.
+
+### ✅ Option 1: Use Prebuilt Binary (Cloud/VM/Kubernetes)
+Download the binary from your cloud path (e.g. from Kubernetes or remote VM):
+```
+back-end/authentication-service/bin/authentication-serviceBinary
+```
+
+Make the binary executable:
+```
+chmod +x authentication-serviceBinary
+```
+Run the service:
+```
+./authentication-serviceBinary
+```
+
+Make sure to set environment variables using the .env file if needed.
+
+
+### ✅ Option 2: Build and Run Using Docker Compose
+Clone the repository:
+```
+git clone https://github.com/MuratTunc/authentication-service.git
+cd authentication-service/back-end/build-tools
+```
+
+Build and start all services:
+```
+./build-services.sh build-all
+```
+
+Environment Configuration:
+```
+The default .env file is located at:
+back-end/build-tools/.env
+```
+### ⚠️ Important: Don’t forget to update the secrets (e.g. JWT keys, database credentials) before deploying to production.
+
+
+
