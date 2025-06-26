@@ -228,5 +228,32 @@ Replace it with your own build.
 
 Use it directly in cloud instances or Kubernetes clusters.
 
+This setup allows developers and ops engineers to quickly customize and deploy the service without digging through build steps or reconfiguring secrets from scratch.
 
+
+
+## ⚠️ Security Disclaimer
+This project includes a default .env file and a compiled binary for development and demonstration purposes only.
+
+- Never use the default .env values in production.
+
+- Always generate and replace secrets (JWT keys, passwords, tokens) in your own environment.
+
+- The provided binary may not be suitable for production use. For security and transparency, build your own from source if deploying in sensitive or regulated environments.
+
+- It's strongly recommended to rotate credentials and restrict access when deploying to cloud or public infrastructure.
+
+
+
+
+## 🚀 Recommended Approach for Production:
+```
+UI → API Gateway → Authentication Service (with internal rate limits too)
+```
+
+- Use rate limiting in both the gateway and the auth service for extra protection.
+
+- Keep your auth service internal, not public-facing.
+
+- UI only talks to gateway, which routes to auth or other microservices.
 
