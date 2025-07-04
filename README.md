@@ -6,21 +6,21 @@ Welcome to the Golang Auth Service — a lightweight, high-performance authentic
 
 ### Features
 
-✅ Built with Go for speed and concurrency
+Built with Go for speed and concurrency
 
-🧩 Uses Chi for idiomatic, lightweight HTTP routing
+Uses Chi for idiomatic, lightweight HTTP routing
 
-🗄️ PostgreSQL for robust and reliable user data persistence
+PostgreSQL for robust and reliable user data persistence
 
-🔒 JWT-based authentication with refresh tokens
+JWT-based authentication with refresh tokens
 
-📩 Email-based reset code & verification support
+Email-based reset code & verification support
 
-📦 Containerized with Docker for easy deployment
+Containerized with Docker for easy deployment
 
 ⚙️ Configurable via Docker Compose
 
-### 🛠️ Tech Stack
+###  Tech Stack
 
 | Technology       | Purpose                                      |
 |------------------|----------------------------------------------|
@@ -34,7 +34,7 @@ Welcome to the Golang Auth Service — a lightweight, high-performance authentic
 
 ---
 
-## 📦 Project Structure & Flow
+##  Project Structure & Flow
 
 ```bash
                 [ .env file ]
@@ -58,7 +58,7 @@ Welcome to the Golang Auth Service — a lightweight, high-performance authentic
 
 
 
-## ✅ Authentication Flow (Best Practice)
+##  Authentication Flow (Best Practice)
 ```bash
 
 [ UI / Frontend ]
@@ -82,8 +82,8 @@ Body: { mailAddress, password }
   Authorization: Bearer <JWT>
 ```
 
-## 🗃️ Database Design
-### 📂 Related Files:
+##  Database Design
+###  Related Files:
 ```bash
 /src/sql/init_users_table.sql  
 /src/database/connection.go  
@@ -110,7 +110,7 @@ Body: { mailAddress, password }
 | updated_at           | TIMESTAMP       | Not Null, Default `CURRENT_TIMESTAMP`                                       |
 
 
-### 🧑‍💼 User Roles
+###  User Roles
 
 | Role                | Permissions                                                                 |
 |---------------------|------------------------------------------------------------------------------|
@@ -118,7 +118,7 @@ Body: { mailAddress, password }
 | `Sales Representative` | Access customer info, update leads/orders, generate sales reports            |
 | `Customer`          | View own profile/orders, update account settings, limited access to features |
 
-##  🔐 JWT-Protected Endpoints
+##   JWT-Protected Endpoints
 
 Some endpoints in the authentication service **require a valid JWT token** to ensure that the caller is authenticated and authorized. Whether you need to send a token depends on the **endpoint's access level** and **user role**.
 
@@ -154,10 +154,10 @@ For endpoints requiring authorization, add the Authorization header accordingly.
 
 Body data is JSON formatted and wrapped in single quotes '...' for shell compatibility.
 
-## 🚀 Installation & Usage
+## Installation & Usage
 You can either use the prebuilt binary directly or run the service using Docker Compose.
 
-### ✅ Option 1: Use Prebuilt Binary (Cloud/VM/Kubernetes)
+### Option 1: Use Prebuilt Binary (Cloud/VM/Kubernetes)
 Download the binary from your cloud path (e.g. from Kubernetes or remote VM):
 ```
 back-end/authentication-service/bin/authentication-serviceBinary
@@ -175,7 +175,7 @@ Run the service:
 Make sure to set environment variables using the .env file if needed.
 
 
-### ✅ Option 2: Build and Run Using Docker Compose
+###  Option 2: Build and Run Using Docker Compose
 Clone the repository:
 ```
 git clone https://github.com/MuratTunc/authentication-service.git
@@ -197,7 +197,7 @@ back-end/build-tools/.env
 ## Configuration & Environment Setup
 We intentionally include the .env file and the precompiled binary in the repository to simplify setup and usage across different environments.
 
-### 📁 .env File
+###  .env File
 - Located at: back-end/build-tools/.env
 
 - Contains all necessary environment variables such as:
@@ -208,7 +208,7 @@ We intentionally include the .env file and the precompiled binary in the reposit
 
 - Port configurations
 
-### 🔐 Important:
+###  Important:
 Update the values in this file before running the service to suit your local, staging, or production environment.
 
 # Example: Change database credentials
@@ -217,12 +217,12 @@ POSTGRES_USER=your_username
 POSTGRES_PASSWORD=your_secure_password
 ```
 
-### 🧱 Binary File
+###  Binary File
 - Located at: back-end/authentication-service/bin/authentication-serviceBinary
 
 - Compiled and included for convenience so you can run the service immediately without building.
 
-### 🛠️ You are free to:
+###  You are free to:
 
 Replace it with your own build.
 
@@ -232,7 +232,7 @@ This setup allows developers and ops engineers to quickly customize and deploy t
 
 
 
-## ⚠️ Security Disclaimer
+##  Security Disclaimer
 This project includes a default .env file and a compiled binary for development and demonstration purposes only.
 
 - Never use the default .env values in production.
@@ -246,7 +246,7 @@ This project includes a default .env file and a compiled binary for development 
 
 
 
-## 🚀 Recommended Approach for Production:
+##  Recommended Approach for Production:
 ```
 UI → API Gateway → Authentication Service (with internal rate limits too)
 ```
